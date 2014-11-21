@@ -1,14 +1,12 @@
 package com.example.showscoutalgorith;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.ParseException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
@@ -22,11 +20,9 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.provider.Settings.System;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity {
 	TextView output;
@@ -44,11 +40,11 @@ public class MainActivity extends Activity {
 			"location", "lat", "lng", "displayName" };
 
 	HashMap<String, ArrayList<String>> playlists = new HashMap<String, ArrayList<String>>();
-	HashMap<String, ArrayList<String>> concerts = new HashMap<String, ArrayList<String>>();
-	HashMap<String, Integer> arts = new HashMap<String, Integer>();
+	HashMap<String, ArrayList<ArrayList<String>>> concerts = new HashMap<String, ArrayList<ArrayList<String>>>();
+	HashMap<String, String> arts = new HashMap<String, String>();
 
 	String spotiUser = [a_spotify_user];
-	String authToken = [a_spotify_authorization_token];
+	String authToken = [a_spotify_authentication_token];
 	String songkickKey = [a_songkick_apikey];
 
 	@Override
@@ -61,14 +57,14 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onClick(View view) {
-				new SpotifyDataGet().execute();
+				new ConcertDataGet().execute();
 
 			}
 		});
 
 	}
 
-	private class SpotifyDataGet extends AsyncTask<String, String, String> {
+	private class ConcertDataGet extends AsyncTask<String, String, String> {
 		private ProgressDialog pDialog;
 
 		@Override
@@ -89,39 +85,76 @@ public class MainActivity extends Activity {
 			try {
 				GetPlaylists();
 				GetArtists();
-				GetConcerts();
+				arts = GetConcerts();
 			}
 
 			catch (Exception e) {
-				e.printStackTrace();
+				// e.printStackTrace();
+				return e.toString();
 			}
 
-			ArrayList<String> debgg = new ArrayList<String>();
-			jsponse = arts.toString();
+			for (Map.Entry<String, ArrayList<String>> r : playlists.entrySet()) {
+				jsponse += r.getKey();
+				jsponse += "\n" + r.getValue().toString() + "\n";
+			}
+			// jsponse = arts.toString();
+			jsponse = concerts.toString();
 
 			return jsponse;
 		}
 
-		private void GetPlaylists() throws Exception {
+		private HttpResponse GetResponse(String getRequest,
+				HashMap<String, String> headers) throws Exception {
 			try {
 				HttpParams httpParameters;
 				httpParameters = new BasicHttpParams();
+				HttpGet request = new HttpGet(getRequest);
 
-				HttpGet request = new HttpGet(
-						"https://api.spotify.com/v1/users/" + spotiUser
-								+ "/playlists");
-				request.addHeader("Accept", "application/json");
-				request.addHeader("Authorization", "Bearer " + authToken);
+				if (!headers.isEmpty()) {
+					for (Map.Entry<String, String> r : headers.entrySet()) {
+						request.addHeader(r.getKey(), r.getValue());
+					}
+				}
 
 				HttpConnectionParams.setSoTimeout(httpParameters, 5000);
 				DefaultHttpClient client = new DefaultHttpClient(httpParameters);
-				HttpResponse response = client.execute(request);
-				JSONObject jObject = new JSONObject(
-						EntityUtils.toString(response.getEntity()));
+				return client.execute(request);
+			}
+
+			catch (Exception e) {
+				throw e;
+			}
+		}
+
+		private JSONObject GetJSONResponse(String getRequest,
+				HashMap<String, String> headers) throws ParseException,
+				JSONException, IOException, Exception {
+
+			return new JSONObject(EntityUtils.toString(GetResponse(getRequest,
+					headers).getEntity()));
+		}
+
+		private void GetPlaylists() throws Exception {
+			try {
+				// String getRequest = "https://api.spotify.com/v1/users/" +
+				// spotiUser +
+				// "/playlists";
+				// HashMap<String, String> headers = new HashMap<String,
+				// String>();
+				// headers.put("Accept", "application/json");
+				// headers.put("Authorization", "Bearer " + authToken);
+
+				// TODO: Start make
+				String getRequest = "http://people.tamu.edu/~ricardo_a._zavala/kkhat111_playlists.json";
+				HashMap<String, String> headers = new HashMap<>();
+				// END TODO
+
+				JSONObject jObject = GetJSONResponse(getRequest, headers);
 				JSONArray items = jObject.getJSONArray(TAG_GET_PLS[0]);
+
 				for (int r = 0; r < items.length(); ++r) {
-					JSONObject item = new JSONObject(items.getString(r));
-					playlists.put(item.getString(TAG_GET_PLS[1]),
+					playlists.put(
+							items.getJSONObject(r).getString(TAG_GET_PLS[1]),
 							new ArrayList<String>());
 				}
 			}
@@ -132,77 +165,79 @@ public class MainActivity extends Activity {
 		}
 
 		private void GetArtists() throws Exception {
-			try {
-				HttpParams httpParameters;
-				httpParameters = new BasicHttpParams();
+			for (Map.Entry<String, ArrayList<String>> i : playlists.entrySet()) {
+				try {
+					// String getRequest = "https://api.spotify.com/v1/users/"
+					// + spotiUser + "/playlists/" + i.getKey()
+					// + "/tracks";
+					// HashMap<String, String> headers = new HashMap<String,
+					// String>();
+					// headers.put("Accept", "application/json");
+					// headers.put("Authorization", "Bearer " + authToken);
 
-				for (Map.Entry<String, ArrayList<String>> i : playlists
-						.entrySet()) {
-					HttpGet request = new HttpGet(
-							"https://api.spotify.com/v1/users/" + spotiUser
-									+ "/playlists/" + i.getKey() + "/tracks");
-					request.addHeader("Accept", "application/json");
-					request.addHeader("Authorization", "Bearer " + authToken);
+					// TODO: Start make
+					String getRequest = "http://people.tamu.edu/~ricardo_a._zavala/kkhat111_"
+							+ i.getKey() + ".json";
+					HashMap<String, String> headers = new HashMap<>();
+					// END TODO
 
-					HttpConnectionParams.setSoTimeout(httpParameters, 5000);
-					DefaultHttpClient client = new DefaultHttpClient(
-							httpParameters);
-					HttpResponse response = client.execute(request);
-					JSONObject jObject = new JSONObject(
-							EntityUtils.toString(response.getEntity()));
+					JSONObject jObject = GetJSONResponse(getRequest, headers);
 					JSONArray items = jObject.getJSONArray(TAG_ARTISTS[0]);
+
 					for (int r = 0; r < items.length(); ++r) {
-						JSONObject item = new JSONObject(items.getString(r));
-						JSONObject track = new JSONObject(
-								item.getString(TAG_ARTISTS[1]));
-						JSONArray artists = track.getJSONArray(TAG_ARTISTS[2]);
+						JSONArray artists = items.getJSONObject(r)
+								.getJSONObject(TAG_ARTISTS[1])
+								.getJSONArray(TAG_ARTISTS[2]);
+
 						for (int s = 0; s < artists.length(); ++s) {
-							JSONObject artist = new JSONObject(
-									artists.getString(s));
-							i.getValue().add(artist.getString(TAG_ARTISTS[3]));
+							i.getValue().add(
+									artists.getJSONObject(s).getString(
+											TAG_ARTISTS[3]));
 						}
 					}
 				}
-			}
 
-			catch (Exception e) {
-				throw e;
+				catch (Exception e) {
+					throw e;
+				}
 			}
 		}
 
-		private HashMap<String, Integer> GetConcerts() throws Exception {
-			HashMap<String, Integer> artists = getArtistIDs();
+		private HashMap<String, String> GetConcerts() throws Exception {
+			HashMap<String, String> artists = getArtistIDs();
+			for (Map.Entry<String, String> r : artists.entrySet()) {
+				try {
+					concerts.put(r.getKey(), getArtistConcerts(r.getValue()));
+
+				}
+
+				catch (Exception e) {
+				}
+			}
 			return artists;
 		}
 
-		private HashMap<String, Integer> getArtistIDs() throws Exception {
-			HashMap<String, Integer> toReturn = new HashMap<String, Integer>();
+		private HashMap<String, String> getArtistIDs() throws Exception {
+			HashMap<String, String> artistIDs = new HashMap<String, String>();
 
 			for (Map.Entry<String, ArrayList<String>> i : playlists.entrySet()) {
 				for (String j : i.getValue()) {
-					Toast.makeText(getApplicationContext(), j,
-							Toast.LENGTH_SHORT).show();
 					try {
-						HttpParams httpParameters;
-						httpParameters = new BasicHttpParams();
-						HttpGet request = new HttpGet(
-								"http://http://api.songkick.com/api/3.0/search/artists.json?query="
-										+ j + "&apikey=" + songkickKey);
-						HttpConnectionParams.setSoTimeout(httpParameters, 5000);
-						DefaultHttpClient client = new DefaultHttpClient(
-								httpParameters);
-						HttpResponse response = client.execute(request);
-						JSONObject jObject = new JSONObject(
-								EntityUtils.toString(response.getEntity()));
-						JSONObject resultsPage = new JSONObject(
-								jObject.getString(TAG_GET_ARSID[0]));
-						JSONObject results = new JSONObject(
-								resultsPage.getString(TAG_GET_ARSID[1]));
-						JSONArray artists = results
-								.getJSONArray(TAG_GET_ARSID[2]);
-						JSONObject artist0 = new JSONObject(
-								artists.getString(0));
-						toReturn.put(j, artist0.getInt(TAG_GET_ARSID[3]));
+						String getRequest = "http://api.songkick.com/api/3.0/search/artists.json?query="
+								+ j.replaceAll("\\s", "%20")
+								+ "&apikey="
+								+ songkickKey;
+						HashMap<String, String> headers = new HashMap<>();
+
+						JSONObject jObject = GetJSONResponse(getRequest,
+								headers);
+						artistIDs.put(
+								j,
+								jObject.getJSONObject(TAG_GET_ARSID[0])
+										.getJSONObject(TAG_GET_ARSID[1])
+										.getJSONArray(TAG_GET_ARSID[2])
+										.getJSONObject(0)
+										.getString(TAG_GET_ARSID[3]));
 					}
 
 					catch (Exception e) {
@@ -211,7 +246,35 @@ public class MainActivity extends Activity {
 				}
 			}
 
-			return toReturn;
+			return artistIDs;
+		}
+
+		private ArrayList<ArrayList<String>> getArtistConcerts(String value)
+				throws ParseException, IOException, Exception {
+			ArrayList<ArrayList<String>> concertDetails = new ArrayList<>();
+
+			String getRequest = "http://api.songkick.com/api/3.0/artists/"
+					+ value + "/calendar.json?apikey=" + songkickKey;
+			HashMap<String, String> headers = new HashMap<>();
+
+			JSONObject jObject = GetJSONResponse(getRequest, headers);
+			JSONArray events = jObject.getJSONObject(TAG_CONCERT[0])
+					.getJSONObject(TAG_CONCERT[1]).getJSONArray(TAG_CONCERT[2]);
+			for (int r = 0; r < events.length(); ++r) {
+				JSONObject event = events.getJSONObject(r);
+
+				ArrayList<String> concert = new ArrayList<String>();
+				concert.add(event.getJSONObject(TAG_DETAILS[1]).getString(
+						TAG_DETAILS[2]));
+				concert.add(event.getJSONObject(TAG_DETAILS[3]).getString(
+						TAG_DETAILS[4]));
+				concert.add(event.getJSONObject(TAG_DETAILS[3]).getString(
+						TAG_DETAILS[5]));
+				concert.add(event.getString(TAG_DETAILS[6]));
+
+				concertDetails.add(concert);
+			}
+			return concertDetails;
 		}
 
 		protected void onPostExecute(String json) {
