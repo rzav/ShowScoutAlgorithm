@@ -1,0 +1,4 @@
+ShowScoutAlgorithm
+==================
+
+SSAlg
